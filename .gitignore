@@ -134,3 +134,12 @@ dmypy.json
 
 # Pycharm
 .idea
+
+# Audio
+audio/*
+
+# Log
+log/*
+
+# Settings
+settings.json

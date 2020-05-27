@@ -1,0 +1,30 @@
+{
+  "in": 7,
+  "out": 0,
+  "need_out": false,
+  "pull": 2,
+  "loop": true,
+  "time": 45,
+  "gpio_mode": 0,
+
+  "lamp_name": "",
+  "lamp_ip": "",
+  "half_time": 0.5,
+  "count": 3,
+  "bright": 100,
+  "temperature": 6500,
+  "tokken": "",
+  "domain": "",
+
+  "output_format": "X264",
+  "ext": ".mkv",
+  "time_format": "%H:%M:%S",
+  "date_format": "%d.%m.%Y ",
+  "file_prefix": "",
+  "rec_time": 10,
+  "port": 8080,
+  "host": "0.0.0.0",
+  "debug": "False",
+  "path_static": "",
+  "path": ""
+}
