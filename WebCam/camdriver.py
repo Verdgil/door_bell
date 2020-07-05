@@ -5,7 +5,7 @@ import os
 import cv2
 import time
 import math
-import settings
+from settings.settings import settings
 import threading
 
 
@@ -14,7 +14,7 @@ class RecordingThread(threading.Thread):
         threading.Thread.__init__(self)
         self.name = name
         self.isRunning = True
-        self.settings = settings
+        self.settings = settings.get_raw_setting()
         self.cap = camera
         self.fps_num()
         self.fourcc = cv2.VideoWriter_fourcc(*self.settings["output_format"])
@@ -68,23 +68,27 @@ class RecordingThread(threading.Thread):
 
 
 class VideoCamera(object):
-    def __init__(self):
+    def __init__(self, ind=0, settings=None):
         cam_index = self.list_cameras()
+        self.cap = None
         if cam_index["len"] > 0:
-            self.cap = cv2.VideoCapture(cam_index["cams_index_array"][0])
-        else:
-            self.cap = None
-        f = open("./../log/log.txt", "a+")
+            self.cap = cv2.VideoCapture(cam_index["cams_index_array"][ind])
+        f = open("./log/log.txt", "a+")
         print("Now cam index:", cam_index, file=f)
         f.close()
         self.is_record = False
         self.out = None
         self.recordingThread = None
-        self.settings = settings.read_setting()
+        if settings is not None:
+            self.settings = settings.get_raw_setting()
+        else:
+            tmp = settings()
+            self.settings = tmp.get_raw_setting()
 
 
     def __del__(self):
-        self.cap.release()
+        if self.cap is not None:
+            self.cap.release()
 
     @staticmethod
     def list_cameras():
@@ -110,7 +114,7 @@ class VideoCamera(object):
             else:
                 self.cap = None
             self.cap = cv2.VideoCapture(cam_index)
-            f = open("./../log/log.txt", "a+")
+            f = open("./log/log.txt", "a+")
             print("Now cam index:", cam_index["cams_index_array"][0], file=f)
             f.close()
             self.start_record()

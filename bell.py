@@ -1,102 +1,64 @@
+import importlib
+import inspect
 import os
 import RPi.GPIO as GPIO
-import json
 import time
 import threading
 import subprocess
 import datetime
-import random
-import settings
-import lamp
-from vk_send import send
-
-pull = [GPIO.PUD_OFF, GPIO.PUD_UP, GPIO.PUD_DOWN]
-
-setting = None
-file = open("./log/log.txt", "w")
 
 
-def th_blink():
-    blinker = lamp.lamp()
-    blinker.blink()
+class bell(threading.Thread):
+    pull = [GPIO.PUD_OFF, GPIO.PUD_UP, GPIO.PUD_DOWN]
+    setting = None
+    cam = None
 
+    def __init__(self, settings, cam):
+        super().__init__()
+        self.cam = cam
+        self.setting = settings
+        self.setup_GPIO()
 
-def setup():
-    global setting
-    try:
-        setting = settings.read_setting()
-    except FileNotFoundError:
-
-        setting = {
-            "in": 7,
-            "out": 0,
-            "need_out": False,
-            "pull": 2,#0 - GPIO.PUD_OFF, 1 - GPIO.PUD_UP, 2 - GPIO.PUD_DOWN,
-            "loop": False,
-            "time": 45,
-            "gpio_mode": 0
-        }
-    setting["audio"] = os.listdir("audio")
-
-
-def setup_GPIO():
-    GPIO.cleanup()
-    if setting["gpio_mode"] == 1:
-        GPIO.setmode(GPIO.BCM)
-    else:
-        GPIO.setmode(GPIO.BOARD)
-    GPIO.setup(setting["in"], GPIO.IN, pull_up_down=pull[setting["pull"]])
-    if setting["need_out"]:
-        GPIO.setup(setting["out"], GPIO.OUT)
-        GPIO.output(setting["out"], True)
-
-
-def th_audio():
-    f = open("/dev/null", "w")
-    loop = " -loop 0 " if setting["loop"] else ""
-    proc = subprocess.Popen("mplayer \"audio/"
-                            + setting["audio"][random.randint(0, len(setting["audio"]) - 1)]
-                            + "\" -af volume=10" + loop, shell=True, stdout=f, stderr=f)
-
-def daemon():
-    while True:
-        signal = GPIO.input(setting["in"])
-        if signal == 1:
-            #TODO: Отправлять на сервер
-            date = datetime.datetime.now()
-            try:
-                send("В дверь звонят в " + str(date))
-            except Exception as e:
-                f = open("./log/log.txt", "a+")
-                print(e, file=f)
-                f.close()
-
-            th_player = threading.Thread(target=th_audio)
-            th_player.daemon = True
-            th_player.start()
-            th_blinker = threading.Thread(target=th_blink)
-            th_blinker.daemon = True
-            th_blinker.start()
-            time.sleep(setting["time"])
-            th_player._stop()
-            os.system("killall -9 mplayer")
+    def setup_GPIO(self):
+        GPIO.cleanup()
+        if self.setting["gpio_mode"] == 1:
+            GPIO.setmode(GPIO.BCM)
         else:
-            time.sleep(0.1)
+            GPIO.setmode(GPIO.BOARD)
+        GPIO.setup(self.setting["in"], GPIO.IN, pull_up_down=self.pull[self.setting["pull"]])
+        if self.setting["need_out"]:
+            GPIO.setup(self.setting["out"], GPIO.OUT)
+            GPIO.output(self.setting["out"], True)
 
+    def th(self, param, date):
+        class_ = getattr(param[0], param[1])
+        notify = class_(self.setting, self.cam)
+        notify.notify("В дверь звонят в " + str(date))
 
-def run():
-    print(os.getcwd(), file=file)
-    file.close()
-    setup()
-    setup_GPIO()
-    daemon()
+    def run(self):
+        while True:
+            signal = GPIO.input(self.setting["in"])
+            if signal == 1:
+                date = datetime.datetime.now()
+                modules = map(lambda mod: (self.setting["notify_prefix"] + "." + mod, mod),
+                              self.setting["notifiers"])
+                modules = map(lambda x: (importlib.import_module(x[0]), x[1]), modules)
+                for i in modules:
+                    th = threading.Thread(target=self.th, args=(i, date))
+                    th.daemon = True
+                    th.start()
+                print()
+            else:
+                time.sleep(0.1)
 
-
-def stop():
-    GPIO.cleanup()
+    def stop(self):
+        GPIO.cleanup()
 
 if __name__ == "__main__":
-    run()
-    i = 0
-    while True:
-        i += 1
+    from settings.settings import settings
+    from WebCam.camdriver import VideoCamera
+
+    settings = settings()
+    thread = bell(settings, VideoCamera(0, settings))
+    thread.daemon = False
+    thread.start()

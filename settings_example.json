@@ -4,8 +4,9 @@
   "need_out": false,
   "pull": 2,
   "loop": true,
-  "time": 45,
+  "audio_time": 45,
   "gpio_mode": 0,
+  "volume": 20,
 
   "lamp_name": "",
   "lamp_ip": "",
@@ -14,7 +15,10 @@
   "bright": 100,
   "temperature": 6500,
   "tokken": "",
-  "domain": "",
+  "domain": [""],
+  "with_cam": true,
+  "no_cam_err": false,
+
 
   "output_format": "X264",
   "ext": ".mkv",
@@ -26,5 +30,7 @@
   "host": "0.0.0.0",
   "debug": "False",
   "path_static": "",
-  "path": ""
+  "path": "",
+  "notify_prefix": "notifications",
+  "notifiers": ["lamp", "audio", "vk_send"]
 }
